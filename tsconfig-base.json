@@ -1,0 +1,47 @@
+{
+    "include": ["src"],
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "target": "es2022",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "esModuleInterop": true,
+        "moduleDetection": "force",
+        "verbatimModuleSyntax": true, // forces import/export type
+        "jsx": "react",
+        "declaration": true,
+        "noEmitOnError": true,
+        "allowJs": true,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noImplicitAny": true,
+        "noUnusedParameters": true,
+        "allowUnreachableCode": false,
+        "noFallthroughCasesInSwitch": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "sourceMap": true,
+        "skipLibCheck": true,
+
+        // Defines what type definitions the lsp provides.  Using bleeding edge
+        // options could be a problem for stability
+        // Remove dom/dom.iterable if code does not run in the DOM
+        "lib": ["dom", "dom.iterable", "es2022"],
+
+        // Must use import attribute of type "json"
+        // import data from "./data.json" assert { type: "json" };
+        // Safer to just use fs instead of importing since older versions of node
+        // might not support this
+        "resolveJsonModule": true,
+
+        // For compatibility with transpilers such as babel.
+        // Caveats: Does not allow enums
+        "isolatedModules": true,
+
+        // Useful, but annoying to have on all the time for when you are deciding
+        // whether or not to use a certain import or variable
+        "noUnusedLocals": false
+    }
+}
