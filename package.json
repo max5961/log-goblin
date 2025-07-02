@@ -1,30 +1,27 @@
 {
-    "name": "jtest",
-    "version": "1.0.0",
+    "name": "capture-stdout",
+    "version": "0.0.0",
     "main": "./dist/index.js",
     "exports": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
     },
     "scripts": {
-        "start": "tsc && node ./dist/index.js",
-        "compile": "tsc --noUnusedLocals",
-        "test": "tsc && npx vitest",
+        "compile": "rm -r dist && tsc --noUnusedLocals",
+        "start": "npm run compile && node ./dist/src/index.js",
+        "test": "npm run compile && for file in ./dist/test/*.test.js; do node $file; done",
         "lint": "eslint",
-        "fix": "eslint --fix",
-        "dev": "tsc --watch",
-        "update": "npx directlink --update"
+        "fix": "eslint --fix"
     },
     "type": "module",
     "keywords": [],
-    "author": "",
+    "author": "Maxwell Morrissey",
     "license": "MIT",
     "devDependencies": {
         "@types/node": "^24.0.10",
         "eslint": "^9.30.1",
         "globals": "^16.3.0",
-        "typescript-eslint": "^8.35.1",
-        "vitest": "^3.2.4"
+        "typescript-eslint": "^8.35.1"
     },
     "directories": {
         "test": "test"

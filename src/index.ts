@@ -1,11 +1,11 @@
 import { writeFileSync } from "fs";
 
-function capture(cb: () => unknown): string {
+export function capture(cb: () => unknown): string {
     const originalWrite = process.stdout.write;
     const originalError = process.stderr.write;
     let result = "";
 
-    const overwrite = (buffer: Uint8Array<ArrayBufferLike> | string) => {
+    const overwrite = (buffer: Uint8Array | string) => {
         result += typeof buffer === "string" ? buffer : buffer.toString();
     };
 
@@ -29,7 +29,7 @@ function capture(cb: () => unknown): string {
     return result;
 }
 
-function redirect(
+export function redirect(
     file: string,
     cb: () => unknown,
     opts: { append?: boolean } = { append: true },
@@ -40,19 +40,3 @@ function redirect(
         flag: opts.append ? "a" : undefined,
     });
 }
-
-console.log(
-    capture(() => {
-        console.log("foo");
-        console.log("bar");
-    }),
-);
-
-redirect(
-    "foo.txt",
-    () => {
-        console.log("foobar");
-        console.error("this is an error");
-    },
-    { append: true },
-);
