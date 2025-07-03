@@ -44,12 +44,12 @@ test("foo\nbar", "stderr multiple log statements and remove \\n from end", () =>
     console.error("bar");
 });
 
-console.log("\nThis stdout should not be captured");
+console.log("\x1b[34m\nThis stdout should not be captured\x1b[0m");
 test("foobar", "resets console.log", () => {
     console.log("foobar");
 });
 
-console.error("\nThis stderr should not be captured");
+console.error("\x1b[34m\nThis stderr should not be captured\x1b[0m");
 test("foobar", "resets console.error", () => {
     console.error("foobar");
 });
