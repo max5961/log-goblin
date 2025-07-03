@@ -1,77 +1,149 @@
-import { capture } from "../src/index.js";
+import { capture } from "../src/capture.js";
+import fs from "fs";
 
 const results = { total: 0, passed: 0 };
 
-function printResults() {
+async function printResults() {
     console.log(
-        `\x1b[36m\nResults:\n\x1b[33m${results.passed}\x1b[0m passed out of \x1b[33m${results.total}\x1b[0m tests.`,
+        `\x1b[33m${results.passed}\x1b[0m passed out of \x1b[33m${results.total}\x1b[0m tests.`,
     );
 }
 
-function test(s: string, message: string | undefined, cb: () => unknown) {
-    const result = capture(cb);
-    const msg = `${message ? "\n  - " : ""}${message ?? ""}`;
-    const rawStr = `\x1b[33m${s.replace(/\n/g, "\\n")}\x1b[0m`;
-    const rawRes = `\x1b[33m${result.replace(/\n/g, "\\n")}\x1b[0m`;
+function expect(actual: string, expected: string) {
+    const rawRes = `\x1b[33m${actual.replace(/\n/g, "\\n")}\x1b[0m`;
+    const rawExp = `\x1b[33m${expected.replace(/\n/g, "\\n")}\x1b[0m`;
+    const res = actual === expected;
+    ++results.total;
 
-    if (result === s) {
-        console.log(`\x1b[32mPass:\x1b[0m ${rawStr}${msg}`);
+    if (res) {
+        console.log(`\x1b[32mPass:\x1b[0m ${rawRes}`);
         ++results.passed;
     } else {
-        console.log(`\x1b[31mFail:\x1b[0m ${msg}`);
+        console.log(`\x1b[31mFail:\x1b[0m`);
         console.log(
-            `    \x1b[32mExpected: ${rawStr}.\x1b[0m \x1b[31mReceived: ${rawRes}\x1b[0m`,
+            `    \x1b[32mExpected: ${rawExp}.\x1b[0m \x1b[31mReceived: ${rawRes}\x1b[0m`,
         );
     }
-    ++results.total;
 }
 
-test("foo", "remove \\n from end", () => {
-    console.log("foo");
+function test(msg: string, cb: () => unknown) {
+    cb();
+    console.log(`\x1b[36m  - ${msg}\n\x1b[0m`);
+
+    return { printResults };
+}
+
+test("remove \\n from end", () => {
+    const result = capture(() => {
+        console.log("foo");
+    });
+    expect(result.output, "foo");
 });
 
-test("foo\nbar", "multiple log statements and remove \\n from end", () => {
-    console.log("foo");
-    console.log("bar");
+test("multiple log statements and remove \\n from end", () => {
+    const result = capture(() => {
+        console.log("foo");
+        console.log("bar");
+    });
+    expect(result.output, "foo\nbar");
 });
 
-test("foo", "stderr", () => {
-    console.error("foo");
+test("...args log statement", () => {
+    const result = capture(() => {
+        console.log("foo", "bar");
+    });
+    expect(result.output, "foo bar");
 });
 
-test("foo\nbar", "stderr multiple log statements and remove \\n from end", () => {
-    console.error("foo");
-    console.error("bar");
+test("captures stderr", () => {
+    const result = capture(() => {
+        console.error("foobar");
+    });
+    expect(result.stderr, "foobar");
+    expect(result.stdout, "");
+    expect(result.output, "foobar");
 });
 
-console.log("\x1b[34m\nThis stdout should not be captured\x1b[0m");
-test("foobar", "resets console.log", () => {
-    console.log("foobar");
+test("multiple stderr", () => {
+    const result = capture(() => {
+        console.error("foo");
+        console.error("bar", "baz");
+    });
+    expect(result.output, "foo\nbar baz");
+    expect(result.stderr, "foo\nbar baz");
+    expect(result.stdout, "");
 });
 
-console.error("\x1b[34m\nThis stderr should not be captured\x1b[0m");
-test("foobar", "resets console.error", () => {
-    console.error("foobar");
+test("can handle predefined fns with console.log", () => {
+    const cb = () => console.log("foo");
+    const result = capture(cb);
+    expect(result.output, "foo");
 });
 
-test("foobar", "captures console.warn", () => {
-    console.warn("foobar");
+test("can handle predefined fns with console.log", () => {
+    const cb = () => console.log("foo");
+    const result = capture(cb);
+    expect(result.output, "foo");
 });
 
-test("foobar", "captures process.stdout.write", () => {
-    process.stdout.write("foobar\n");
+console.log("\x1b[34mThis stdout should not be captured\x1b[0m");
+test("resets console.log", () => {
+    const result = capture(() => console.log("foobar"));
+    expect(result.stdout, "foobar");
 });
 
-test("foobar", "captures process.stderr.write", () => {
-    process.stderr.write("foobar\n");
+console.error("\x1b[34mThis stderr should not be captured\x1b[0m");
+test("resets console.error", () => {
+    const result = capture(() => console.error("foobar"));
+    expect(result.stderr, "foobar");
 });
 
-test("foo\nbar\nbaz\nban\nquz", "captures different log statements together", () => {
-    console.log("foo");
-    console.error("bar");
-    console.warn("baz");
-    process.stdout.write("ban\n");
-    process.stderr.write("quz\n");
+console.warn("\x1b[34mThis stderr [warn] should not be captured\x1b[0m");
+test("resets console.warn", () => {
+    const result = capture(() => console.warn("foobar"));
+    expect(result.stderr, "foobar");
 });
 
-printResults();
+test("captures process.stdout.write", () => {
+    const result = capture(() => {
+        process.stdout.write("foobar");
+    });
+    expect(result.stdout, "foobar");
+});
+
+test("captures process.stderr.write", () => {
+    const result = capture(() => {
+        process.stderr.write("foobar");
+    });
+    expect(result.stderr, "foobar");
+});
+
+test("captures different logging methods together", () => {
+    const result = capture(() => {
+        console.log("foo");
+        console.error("bar");
+        console.warn("baz");
+        process.stdout.write("ban\n");
+        process.stderr.write("quz\n");
+    });
+    expect(result.output, "foo\nbar\nbaz\nban\nquz");
+});
+
+test("writes to file", () => {
+    const file = "foo.txt";
+    capture(() => {
+        console.log("foo");
+    }).write(file);
+    expect(fs.readFileSync(file, { encoding: "utf-8" }), "foo");
+    fs.rmSync(file);
+});
+
+test("writes to file async", async () => {
+    const file = "foo.txt";
+    const result = capture(() => {
+        console.log("foo");
+    });
+    await result.writeAsync(file);
+    expect(fs.readFileSync(file, { encoding: "utf-8" }), "foo");
+    fs.rmSync(file);
+}).printResults();

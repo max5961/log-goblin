@@ -11,7 +11,7 @@
         "dist"
     ],
     "scripts": {
-        "compile": "rm -r dist && tsc --noUnusedLocals",
+        "compile": "if [ -d ./dist ]; then rm -r dist; fi; tsc --noUnusedLocals",
         "start": "npm run compile && node ./dist/src/index.js",
         "test": "npm run compile && for file in ./dist/test/*.test.js; do node $file; done",
         "lint": "eslint",
