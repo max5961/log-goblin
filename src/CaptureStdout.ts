@@ -1,10 +1,19 @@
+import type { Mode, OpenMode, ObjectEncodingOptions, WriteFileOptions } from "node:fs";
 import { writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { type WriteFileOptions, type ObjectEncodingOptions } from "node:fs";
 
-type Opts = {
-    contents?: "stdout" | "stderr" | "output";
-};
+type Opts =
+    | {
+          contents?: "stdout" | "stderr" | "output";
+          mode?: Mode;
+          flag?: OpenMode;
+          flush?: boolean;
+      }
+    | BufferEncoding
+    | null;
+
+type AsyncOpts = ObjectEncodingOptions & Opts;
+type SyncOpts = WriteFileOptions & Opts;
 
 export class CaptureStdout {
     public stdout: string;
@@ -17,24 +26,30 @@ export class CaptureStdout {
         this.output = "";
     }
 
-    private getContents = (contents?: "stdout" | "stderr" | "output") => {
-        return contents === "stdout"
-            ? this.stdout
-            : contents === "stderr"
-              ? this.stderr
-              : this.output;
+    private getContents = (opts: Opts) => {
+        const type = typeof opts === "object" && opts !== null ? opts.contents : null;
+        const contents =
+            type === "stdout"
+                ? this.stdout
+                : type === "stderr"
+                  ? this.stderr
+                  : this.output;
+
+        return contents + (contents.endsWith("\n") ? "" : "\n");
     };
 
-    public write = (file: string, opts: WriteFileOptions & Opts = {}): CaptureStdout => {
-        writeFileSync(file, this.getContents(opts.contents), opts);
+    public write = (file: string, opts: SyncOpts = {}): CaptureStdout => {
+        const contents = this.getContents(opts);
+        writeFileSync(file, contents, opts);
         return this;
     };
 
     public writeAsync = async (
         file: string,
-        opts: ObjectEncodingOptions & Opts = {},
+        opts: AsyncOpts = {},
     ): Promise<CaptureStdout> => {
-        await writeFile(file, this.getContents(opts.contents), opts);
+        const contents = this.getContents(opts);
+        await writeFile(file, contents, opts);
         return this;
     };
 }
