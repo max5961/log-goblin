@@ -1,6 +1,10 @@
 *Capture stdout/stderr in Node.  Should capture console.log, console.warn, and
 console.error statements in browser (untested)*
 
+```sh
+npm install log-goblin
+```
+
 ---
 
 ## Example Usage

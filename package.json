@@ -1,7 +1,7 @@
 {
-    "name": "capture-stdout",
+    "name": "log-goblin",
     "version": "0.0.0",
-    "description": "Capture stdout from a callback and return it",
+    "description": "Capture stdout/stderr in Node",
     "main": "./dist/src/index.js",
     "exports": {
         "types": "./dist/src/index.d.ts",
