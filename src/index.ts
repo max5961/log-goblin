@@ -1,1 +1,1 @@
-export { capture } from "./capture.js";
+export { Capture } from "./Capture.js";
