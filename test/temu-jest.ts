@@ -17,7 +17,7 @@ export async function describe(desc: string, cb: () => unknown) {
     const green = (s: SN) => `\x1b[32m${String(s)}\x1b[0m`;
     const red = (s: SN) => `\x1b[31m${String(s)}\x1b[0m`;
 
-    console.log(`${cyan(desc)}:`);
+    console.log(`${cyan(desc)}:\n`);
     cb();
 
     const totals = { passed: 0, failed: 0, total: 0 };
@@ -30,12 +30,18 @@ export async function describe(desc: string, cb: () => unknown) {
 
             await callbacks[i](results[i]);
             const { actual, expected, desc } = results[i];
+
+            const rawActual = `\x1b[33m${String(actual).replace(/\n/g, "\\n")}\x1b[0m`;
+            const rawExpected = `\x1b[33m${String(expected).replace(/\n/g, "\\n")}\x1b[0m`;
+
             if (actual === expected) {
-                console.log(`  ${yellow(desc + ":")} ${green("pass")}`);
+                console.log(`  ${yellow(desc + ":")}\n    ${green("pass")}`);
                 ++totals.passed;
             } else {
-                console.log(`  ${yellow(desc + ":")} ${red("fail")}`);
-                console.log(`    Expected: '${blue(actual)}' to be '${cyan(expected)}'`);
+                console.log(`  ${yellow(desc + ":")}\n    ${red("fail")}`);
+                console.log(
+                    `      Expected: '${blue(rawActual)}' to be '${cyan(rawExpected)}'`,
+                );
                 ++totals.failed;
             }
             ++totals.total;
@@ -43,7 +49,7 @@ export async function describe(desc: string, cb: () => unknown) {
     }
 
     console.log(
-        `${cyan(desc)}: ${yellow(totals.passed)} out of ${yellow(totals.total)} tests passed.`,
+        `\n${cyan(desc)}: ${yellow(totals.passed)} out of ${yellow(totals.total)} tests passed.`,
     );
 }
 

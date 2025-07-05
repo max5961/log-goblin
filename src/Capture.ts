@@ -29,6 +29,7 @@ export class Capture {
         this.stdout = "";
         this.stderr = "";
         this.output = "";
+        return this;
     };
 
     private getContents = (opts: Opts) => {
@@ -49,17 +50,6 @@ export class Capture {
     };
 
     public stop = (): Capture => {
-        const trimNl = (s: string) => {
-            if (s.endsWith("\n")) {
-                return s.slice(0, s.length - 1);
-            }
-            return s;
-        };
-
-        this.stdout = trimNl(this.stdout);
-        this.stderr = trimNl(this.stderr);
-        this.output = trimNl(this.output);
-
         provider.stop(this);
         return this;
     };
@@ -73,14 +63,12 @@ export class Capture {
 
     public write = (file: string, opts: SyncOpts = {}): Capture => {
         const contents = this.getContents(opts);
-        this.reset();
         writeFileSync(file, contents, opts);
         return this;
     };
 
     public writeAsync = async (file: string, opts: AsyncOpts = {}): Promise<Capture> => {
         const contents = this.getContents(opts);
-        this.reset();
         await writeFile(file, contents, opts);
         return this;
     };
