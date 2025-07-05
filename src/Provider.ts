@@ -7,13 +7,53 @@ import type { Capture } from "./Capture.js";
  */
 export class Provider {
     public instances: Set<Capture>;
-    private originalStdOutWrite: typeof process.stdout.write;
-    private originalStdErrWrite: typeof process.stderr.write;
+    private originalStdOutWrite!: typeof process.stdout.write;
+    private originalStdErrWrite!: typeof process.stderr.write;
+    private originalClog!: typeof console.log;
+    private originalCwarn!: typeof console.warn;
+    private originalCerr!: typeof console.error;
 
     constructor() {
         this.instances = new Set();
-        this.originalStdOutWrite = process.stdout.write;
-        this.originalStdErrWrite = process.stderr.write;
+        this.setOriginals();
+    }
+
+    private throwIfBrowser() {
+        if (
+            !process ||
+            !process.stdout ||
+            !process.stderr ||
+            !process.stdout.write ||
+            !process.stderr.write ||
+            !process.version ||
+            typeof process.version !== "string"
+        ) {
+            throw new Error("browser env");
+        }
+    }
+
+    private setOriginals() {
+        try {
+            this.throwIfBrowser();
+            this.originalStdOutWrite = process.stdout.write;
+            this.originalStdErrWrite = process.stderr.write;
+        } catch {
+            this.originalClog = console.log;
+            this.originalCwarn = console.warn;
+            this.originalCerr = console.error;
+        }
+    }
+
+    private resetOriginals() {
+        try {
+            this.throwIfBrowser();
+            process.stdout.write = this.originalStdOutWrite;
+            process.stderr.write = this.originalStdErrWrite;
+        } catch {
+            console.log = this.originalClog;
+            console.error = this.originalCerr;
+            console.warn = this.originalCwarn;
+        }
     }
 
     private overwrite() {
@@ -28,8 +68,14 @@ export class Provider {
                 }
             };
 
-        process.stdout.write = overwrite("stdout") as typeof process.stdout.write;
-        process.stderr.write = overwrite("stderr") as typeof process.stderr.write;
+        try {
+            process.stdout.write = overwrite("stdout") as typeof process.stdout.write;
+            process.stderr.write = overwrite("stderr") as typeof process.stderr.write;
+        } catch {
+            console.log = overwrite("stdout") as typeof console.log;
+            console.warn = overwrite("stderr") as typeof console.warn;
+            console.error = overwrite("stderr") as typeof console.error;
+        }
     }
 
     public start = (instance: Capture) => {
@@ -42,8 +88,7 @@ export class Provider {
         if (this.instances.size) {
             this.overwrite();
         } else {
-            process.stdout.write = this.originalStdOutWrite;
-            process.stderr.write = this.originalStdErrWrite;
+            this.resetOriginals();
         }
     };
 }
