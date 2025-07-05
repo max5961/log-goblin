@@ -25,7 +25,7 @@ export class Capture {
         this.reset();
     }
 
-    public reset = () => {
+    public reset = (): Capture => {
         this.stdout = "";
         this.stderr = "";
         this.output = "";
