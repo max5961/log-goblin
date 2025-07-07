@@ -1,5 +1,18 @@
 import type { Capture } from "./Capture.js";
 
+type Opts = {
+    process?: {
+        stdout?: boolean;
+        stderr?: boolean;
+    };
+    log?: boolean;
+    error?: boolean;
+    warn?: boolean;
+    info?: boolean;
+    debug?: boolean;
+    dirxml?: boolean;
+};
+
 /**
  * This allows for multiple instances of Capture to run at the same time.
  * It won't prevent overlap in the event `B` starts capturing before `A` has
@@ -7,76 +20,90 @@ import type { Capture } from "./Capture.js";
  */
 export class Provider {
     public instances: Set<Capture>;
-    private originalStdOutWrite!: typeof process.stdout.write;
-    private originalStdErrWrite!: typeof process.stderr.write;
-    private originalClog!: typeof console.log;
-    private originalCwarn!: typeof console.warn;
-    private originalCerr!: typeof console.error;
+    public resetCbs: (() => void)[];
+    private opts!: Opts;
 
-    constructor() {
+    constructor(opts: Opts = {}) {
         this.instances = new Set();
-        this.setOriginals();
+        this.resetCbs = [];
+        this.setOpts(opts);
     }
 
-    private throwIfBrowser() {
-        if (
-            !process ||
-            !process.stdout ||
-            !process.stderr ||
-            !process.stdout.write ||
-            !process.stderr.write ||
-            !process.version ||
-            typeof process.version !== "string"
-        ) {
-            throw new Error("browser env");
-        }
-    }
+    public setOpts = (opts: Opts) => {
+        opts.process = opts.process ?? {};
+        opts.process.stdout = opts.process.stdout ?? false;
+        opts.process.stderr = opts.process.stderr ?? false;
+        opts.log = opts.log ?? true;
+        opts.error = opts.error ?? true;
+        opts.warn = opts.warn ?? true;
+        opts.info = opts.info ?? true;
+        opts.debug = opts.debug ?? true;
+        opts.dirxml = opts.dirxml ?? true;
+        this.opts = opts;
+    };
 
-    private setOriginals() {
-        try {
-            this.throwIfBrowser();
-            this.originalStdOutWrite = process.stdout.write;
-            this.originalStdErrWrite = process.stderr.write;
-        } catch {
-            this.originalClog = console.log;
-            this.originalCwarn = console.warn;
-            this.originalCerr = console.error;
-        }
+    private overwrite() {
+        const pushReset = (...args: Parameters<typeof this.wrapConsoleMethod>) => {
+            this.resetCbs.push(this.wrapConsoleMethod(...args));
+        };
+
+        pushReset("log", "stdout");
+        pushReset("info", "stdout");
+        pushReset("error", "stderr");
+        pushReset("warn", "stderr");
+        pushReset("debug", "stdout");
+        pushReset("dirxml", "stdout");
+
+        this.resetCbs.push(this.wrapProcessMethod("stdout"));
+        this.resetCbs.push(this.wrapProcessMethod("stderr"));
     }
 
     private resetOriginals() {
-        try {
-            this.throwIfBrowser();
-            process.stdout.write = this.originalStdOutWrite;
-            process.stderr.write = this.originalStdErrWrite;
-        } catch {
-            console.log = this.originalClog;
-            console.error = this.originalCerr;
-            console.warn = this.originalCwarn;
-        }
+        this.resetCbs.forEach((cb) => cb());
+        this.resetCbs = [];
     }
 
-    private overwrite() {
-        const overwrite =
-            (type: "stdout" | "stderr") => (buffer: Uint8Array | string) => {
-                const str = typeof buffer === "string" ? buffer : buffer.toString();
+    private wrapConsoleMethod = (
+        name: keyof typeof console,
+        type: "stdout" | "stderr",
+    ): (() => void) => {
+        const original = console[name] as typeof console.log;
 
-                for (const instance of this.instances) {
-                    if (type == "stdout") instance.stdout += str;
-                    if (type === "stderr") instance.stderr += str;
-                    instance.output += str;
+        if (console[name] && this.opts[name as keyof typeof this.opts]) {
+            (console[name] as typeof console.log) = (...data: unknown[]) => {
+                for (let i = 0; i < data.length; ++i) {
+                    const toAppend =
+                        i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
+                    for (const instance of this.instances) {
+                        instance[type] += toAppend;
+                        instance.output += toAppend;
+                    }
                 }
             };
-
-        try {
-            process.stdout.write = overwrite("stdout") as typeof process.stdout.write;
-            process.stderr.write = overwrite("stderr") as typeof process.stderr.write;
-        } catch {
-            console.log = overwrite("stdout") as typeof console.log;
-            console.warn = overwrite("stderr") as typeof console.warn;
-            console.error = overwrite("stderr") as typeof console.error;
         }
-    }
+
+        return () => ((console[name] as typeof console.log) = original);
+    };
+
+    private wrapProcessMethod = (type: "stdout" | "stderr"): (() => void) => {
+        const original = process?.[type]?.write;
+        if (!original) return () => {};
+
+        process[type].write = ((buffer: Uint8Array | string): void => {
+            const str = typeof buffer === "string" ? buffer : buffer.toString();
+            for (const instance of this.instances) {
+                instance[type] += str;
+                instance.output += str;
+            }
+        }) as typeof process.stdout.write;
+
+        return () => {
+            // @ts-expect-error this will always return true in node, but not in the browser
+            if (process?.[type]?.write) {
+                process[type].write = original;
+            }
+        };
+    };
 
     public start = (instance: Capture) => {
         this.instances.add(instance);
@@ -85,6 +112,9 @@ export class Provider {
 
     public stop = (instance: Capture) => {
         this.instances.delete(instance);
+
+        // Still need to overwrite again here so the overwritten methods don't
+        // include the instance that was just removed
         if (this.instances.size) {
             this.overwrite();
         } else {
