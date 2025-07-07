@@ -44,6 +44,26 @@ export class Capture {
         return contents + (contents.endsWith("\n") ? "" : "\n");
     };
 
+    public handle = (
+        cb: ({
+            output,
+            stdout,
+            stderr,
+        }: {
+            output: string;
+            stdout: string;
+            stderr: string;
+        }) => unknown,
+    ): Capture => {
+        cb({
+            output: this.output,
+            stdout: this.stdout,
+            stderr: this.stderr,
+        });
+
+        return this;
+    };
+
     public start = (): Capture => {
         provider.start(this);
         return this;

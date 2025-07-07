@@ -25,7 +25,11 @@ capture.stop();
 
 capture.start();
 console.log("bar");
-capture.stop();
+capture
+    .stop()
+    .handle(({stdout, stderr, output}) => {
+        /* do something with the data */
+    })
 
 // capture.output and capture.stdout are now both "foo\nbar\n"
 
@@ -109,6 +113,9 @@ c2.stop()
         - *type*:  Same as `write`, but uses `fs.promises.write` and returns a
           Promise that resolves to the Capture instance.
         - Same as `write`.
+    - `handle`
+        - *type*: `(cb: ({stdout: string; stderr: string; output: string}) => unknown) => Capture`
+        - Utility designed for handling the saved data method chaining in mind
 
 
 
