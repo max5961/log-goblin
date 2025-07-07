@@ -2,8 +2,9 @@ import type { Mode, OpenMode, ObjectEncodingOptions, WriteFileOptions } from "no
 import { writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { provider } from "./Provider.js";
+import { SetOpts, type Opts } from "./Opts.js";
 
-type Opts =
+type WriteOpts =
     | {
           contents?: "stdout" | "stderr" | "output";
           mode?: Mode;
@@ -13,16 +14,18 @@ type Opts =
     | BufferEncoding
     | null;
 
-type AsyncOpts = ObjectEncodingOptions & Opts;
-type SyncOpts = WriteFileOptions & Opts;
+type AsyncOpts = ObjectEncodingOptions & WriteOpts;
+type SyncOpts = WriteFileOptions & WriteOpts;
 
 export class Capture {
     public stdout!: string;
     public stderr!: string;
     public output!: string;
+    public opts!: SetOpts;
 
-    constructor() {
+    constructor(opts: Opts = {}) {
         this.reset();
+        this.opts = new SetOpts(opts);
     }
 
     public reset = (): Capture => {
@@ -32,7 +35,11 @@ export class Capture {
         return this;
     };
 
-    private getContents = (opts: Opts) => {
+    public setOpts = (opts: Opts) => {
+        this.opts.setOpts(opts);
+    };
+
+    private getWriteContents = (opts: WriteOpts) => {
         const type = typeof opts === "object" && opts !== null ? opts.contents : null;
         const contents =
             type === "stdout"
@@ -82,13 +89,13 @@ export class Capture {
     };
 
     public write = (file: string, opts: SyncOpts = {}): Capture => {
-        const contents = this.getContents(opts);
+        const contents = this.getWriteContents(opts);
         writeFileSync(file, contents, opts);
         return this;
     };
 
     public writeAsync = async (file: string, opts: AsyncOpts = {}): Promise<Capture> => {
-        const contents = this.getContents(opts);
+        const contents = this.getWriteContents(opts);
         await writeFile(file, contents, opts);
         return this;
     };

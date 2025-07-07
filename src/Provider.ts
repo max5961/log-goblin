@@ -1,17 +1,15 @@
 import type { Capture } from "./Capture.js";
 
-type Opts = {
-    process?: {
-        stdout?: boolean;
-        stderr?: boolean;
-    };
-    log?: boolean;
-    error?: boolean;
-    warn?: boolean;
-    info?: boolean;
-    debug?: boolean;
-    dirxml?: boolean;
-};
+const Defaults = {
+    log: console.log,
+    info: console.info,
+    error: console.error,
+    warn: console.warn,
+    debug: console.debug,
+    dirxml: console.dirxml,
+    stdout: process?.stdout?.write,
+    stderr: process?.stderr?.write,
+} as const;
 
 /**
  * This allows for multiple instances of Capture to run at the same time.
@@ -21,28 +19,16 @@ type Opts = {
 export class Provider {
     public instances: Set<Capture>;
     public resetCbs: (() => void)[];
-    private opts!: Opts;
+    private listening: boolean;
 
-    constructor(opts: Opts = {}) {
+    constructor() {
         this.instances = new Set();
         this.resetCbs = [];
-        this.setOpts(opts);
+        this.listening = false;
     }
 
-    public setOpts = (opts: Opts) => {
-        opts.process = opts.process ?? {};
-        opts.process.stdout = opts.process.stdout ?? false;
-        opts.process.stderr = opts.process.stderr ?? false;
-        opts.log = opts.log ?? true;
-        opts.error = opts.error ?? true;
-        opts.warn = opts.warn ?? true;
-        opts.info = opts.info ?? true;
-        opts.debug = opts.debug ?? true;
-        opts.dirxml = opts.dirxml ?? true;
-        this.opts = opts;
-    };
-
-    private overwrite() {
+    public overwrite() {
+        if (!this.listening) return;
         const pushReset = (...args: Parameters<typeof this.wrapConsoleMethod>) => {
             this.resetCbs.push(this.wrapConsoleMethod(...args));
         };
@@ -63,49 +49,8 @@ export class Provider {
         this.resetCbs = [];
     }
 
-    private wrapConsoleMethod = (
-        name: keyof typeof console,
-        type: "stdout" | "stderr",
-    ): (() => void) => {
-        const original = console[name] as typeof console.log;
-
-        if (console[name] && this.opts[name as keyof typeof this.opts]) {
-            (console[name] as typeof console.log) = (...data: unknown[]) => {
-                for (let i = 0; i < data.length; ++i) {
-                    const toAppend =
-                        i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
-                    for (const instance of this.instances) {
-                        instance[type] += toAppend;
-                        instance.output += toAppend;
-                    }
-                }
-            };
-        }
-
-        return () => ((console[name] as typeof console.log) = original);
-    };
-
-    private wrapProcessMethod = (type: "stdout" | "stderr"): (() => void) => {
-        const original = process?.[type]?.write;
-        if (!original) return () => {};
-
-        process[type].write = ((buffer: Uint8Array | string): void => {
-            const str = typeof buffer === "string" ? buffer : buffer.toString();
-            for (const instance of this.instances) {
-                instance[type] += str;
-                instance.output += str;
-            }
-        }) as typeof process.stdout.write;
-
-        return () => {
-            // @ts-expect-error this will always return true in node, but not in the browser
-            if (process?.[type]?.write) {
-                process[type].write = original;
-            }
-        };
-    };
-
     public start = (instance: Capture) => {
+        this.listening = true;
         this.instances.add(instance);
         this.overwrite();
     };
@@ -118,8 +63,57 @@ export class Provider {
         if (this.instances.size) {
             this.overwrite();
         } else {
+            this.listening = false;
             this.resetOriginals();
         }
+    };
+
+    private wrapConsoleMethod = (
+        name: keyof typeof console,
+        type: "stdout" | "stderr",
+    ): (() => void) => {
+        const original = console[name] as typeof console.log;
+
+        if (console[name]) {
+            (console[name] as typeof console.log) = (...data: unknown[]) => {
+                for (let i = 0; i < data.length; ++i) {
+                    const toAppend =
+                        i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
+
+                    for (const instance of this.instances) {
+                        if (instance.opts[name as keyof typeof instance.opts]) {
+                            instance[type] += toAppend;
+                            instance.output += toAppend;
+                        } else {
+                            original(...data);
+                        }
+                    }
+                }
+            };
+        }
+
+        return () =>
+            ((console[name] as typeof console.log) =
+                Defaults[name as keyof typeof Defaults] ?? original);
+    };
+
+    private wrapProcessMethod = (type: "stdout" | "stderr"): (() => void) => {
+        const original = Defaults[type];
+        if (!process?.stdout?.write || !original) return () => {};
+
+        process[type].write = ((buffer: Uint8Array | string): void => {
+            const str = typeof buffer === "string" ? buffer : buffer.toString();
+            for (const instance of this.instances) {
+                if (instance.opts[type]) {
+                    instance[type] += str;
+                    instance.output += str;
+                }
+            }
+        }) as typeof process.stdout.write;
+
+        return () => {
+            process[type].write = original;
+        };
     };
 }
 
