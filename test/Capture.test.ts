@@ -2,6 +2,16 @@ import { describe, test, beforeEach } from "./temu-jest.js";
 import { Capture } from "../src/Capture.js";
 import fs from "fs";
 
+/**
+ * *Caveat*: If stdout is true, it captures all console methods that log to stdout,
+ * with the same being true for stderr.  This is because the console methods
+ * ultimately call process.stdout|stderr.write.  However, testing frameworks
+ * and the browser aren't compatible with process methods since they either don't
+ * have them (browser) or they hijack the console methods (to be compat) with the
+ * browser.  This is the reasoning behind the 'temu-jest', so that we can test
+ * what happens when we hijack process.stdout|stderr.write.
+ */
+
 describe("Capture", () => {
     const capture = new Capture({
         stdout: true,
@@ -308,4 +318,72 @@ describe("Capture", () => {
             c2: "bar\n",
         });
     });
+
+    test("config w/ stdout/stderr true + all console methods true", async (t) => {
+        const c = new Capture({
+            stdout: true,
+            stderr: true,
+            // console methods are true by default
+        });
+
+        c.start();
+        process.stdout.write("foo\n");
+        process.stderr.write("bar\n");
+        console.log("baz", "ban");
+        console.error("quz", "quux");
+        c.stop();
+
+        t.actual = c.output;
+        t.expected = "foo\nbar\nbaz ban\nquz quux\n";
+    });
+
+    test("logging undefined", async (t) => {
+        capture.start();
+        console.log(undefined);
+        capture.stop();
+
+        t.actual = replaceEsc(capture.output);
+        t.expected = "undefined\n";
+    });
+
+    test("logging null", async (t) => {
+        capture.start();
+        console.log(null);
+        capture.stop();
+
+        t.actual = replaceEsc(capture.output);
+        t.expected = "null\n";
+    });
+
+    test("logging objects", async (t) => {
+        capture.start();
+        console.log({ foo: "foo" });
+        capture.stop();
+
+        t.actual = replaceEsc(capture.output);
+        t.expected = "{ foo: 'foo' }\n";
+    });
+
+    test("logging arrays", async (t) => {
+        capture.start();
+        console.log(["foo"]);
+        capture.stop();
+
+        t.actual = replaceEsc(capture.output);
+        t.expected = "[ 'foo' ]\n";
+    });
+
+    test("console.count", async (t) => {
+        capture.start();
+        console.count("foo");
+        capture.stop();
+
+        t.actual = capture.output;
+        t.expected = "foo: 1\n";
+    });
 });
+
+function replaceEsc(s: string): string {
+    // eslint-disable-next-line no-control-regex
+    return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
