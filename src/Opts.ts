@@ -1,105 +1,93 @@
-import { provider } from "./Provider.js";
+import { provider, type ConsoleMethods, type ProcessMethods } from "./Provider.js";
 
-export type Opts = {
-    log?: boolean;
-    error?: boolean;
-    warn?: boolean;
-    info?: boolean;
-    debug?: boolean;
-    dirxml?: boolean;
-    stdout?: boolean;
-    stderr?: boolean;
-};
+export type Opts = Partial<{
+    [P in ConsoleMethods | ProcessMethods]: boolean;
+}>;
 
 export class SetOpts {
-    #log!: boolean;
-    #error!: boolean;
-    #warn!: boolean;
-    #info!: boolean;
-    #debug!: boolean;
-    #dirxml!: boolean;
-    #stdout!: boolean;
-    #stderr!: boolean;
+    #opts!: Required<Opts>;
 
     constructor(opts: Opts = {}) {
         this.setOpts(opts);
     }
 
     public setOpts = (opts: Opts) => {
-        this.#log = opts.log ?? true;
-        this.#error = opts.error ?? true;
-        this.#warn = opts.warn ?? true;
-        this.#info = opts.info ?? true;
-        this.#debug = opts.debug ?? true;
-        this.#dirxml = opts.dirxml ?? true;
-        this.#stdout = opts.stdout ?? false;
-        this.#stderr = opts.stderr ?? false;
+        this.#opts = {
+            log: opts.log ?? true,
+            error: opts.error ?? true,
+            warn: opts.warn ?? true,
+            info: opts.info ?? true,
+            debug: opts.debug ?? true,
+            dirxml: opts.dirxml ?? true,
+            stdout: opts.stdout ?? false,
+            stderr: opts.stderr ?? false,
+        };
 
         provider.overwrite();
     };
-
-    /*
-     * GETTERS
-     */
-    public get log() {
-        return this.#log;
-    }
-    public get error() {
-        return this.#error;
-    }
-    public get warn() {
-        return this.#warn;
-    }
-    public get info() {
-        return this.#info;
-    }
-    public get debug() {
-        return this.#debug;
-    }
-    public get dirxml() {
-        return this.#dirxml;
-    }
-    public get stdout() {
-        return this.#stdout;
-    }
-    public get stderr() {
-        return this.#stderr;
-    }
 
     /*
      * SETTERS
      */
 
     public set log(b: boolean) {
-        this.#log = b;
+        this.#opts.log = b;
         provider.overwrite();
     }
     public set error(b: boolean) {
-        this.#error = b;
+        this.#opts.error = b;
         provider.overwrite();
     }
     public set warn(b: boolean) {
-        this.#warn = b;
+        this.#opts.warn = b;
         provider.overwrite();
     }
     public set info(b: boolean) {
-        this.#info = b;
+        this.#opts.info = b;
         provider.overwrite();
     }
     public set debug(b: boolean) {
-        this.#debug = b;
+        this.#opts.debug = b;
         provider.overwrite();
     }
     public set dirxml(b: boolean) {
-        this.#dirxml = b;
+        this.#opts.dirxml = b;
         provider.overwrite();
     }
     public set stdout(b: boolean) {
-        this.#stdout = b;
+        this.#opts.stdout = b;
         provider.overwrite();
     }
     public set stderr(b: boolean) {
-        this.#stderr = b;
+        this.#opts.stderr = b;
         provider.overwrite();
+    }
+
+    /*
+     * GETTERS
+     */
+    public get log() {
+        return this.#opts.log;
+    }
+    public get error() {
+        return this.#opts.error;
+    }
+    public get warn() {
+        return this.#opts.warn;
+    }
+    public get info() {
+        return this.#opts.info;
+    }
+    public get debug() {
+        return this.#opts.debug;
+    }
+    public get dirxml() {
+        return this.#opts.dirxml;
+    }
+    public get stdout() {
+        return this.#opts.stdout;
+    }
+    public get stderr() {
+        return this.#opts.stderr;
     }
 }

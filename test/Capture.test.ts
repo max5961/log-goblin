@@ -381,6 +381,99 @@ describe("Capture", () => {
         t.actual = capture.output;
         t.expected = "foo: 1\n";
     });
+
+    test("modify config timing during a capture", async (t) => {
+        const c = new Capture();
+
+        c.start();
+        console.log("foo");
+        c.setOpts({ log: false });
+        console.log("Modify config during capture - this should be written to stdout");
+        c.stop();
+
+        t.actual = c.output;
+        t.expected = "foo\n";
+    });
+
+    test("multiple instances w/ uncaptured console.log do not log more than once", async (t) => {
+        const c1 = new Capture({ log: false });
+        const c2 = new Capture({ log: false });
+
+        c1.start();
+        c2.start();
+
+        console.log("this should be logged");
+
+        c1.stop();
+        c2.stop();
+
+        t.actual = "foo\n";
+        t.expected = "foo\n";
+    });
+
+    test("if any instances opt in to capture a specific console method, output should not be logged even if there is an instance operating on the same block that chooses to not capture that method", async (t) => {
+        const c1 = new Capture({
+            log: false,
+            error: true,
+        });
+        const c2 = new Capture({
+            log: true,
+            error: false,
+        });
+
+        c1.start();
+        c2.start();
+
+        const errmsg = "this should not be logged - err";
+        const logmsg = "this should not be logged - log";
+        console.error(errmsg);
+        console.log(logmsg);
+
+        c1.stop();
+        c2.stop();
+
+        t.actual = JSON.stringify({
+            c1: c1.output,
+            c2: c2.output,
+        });
+
+        t.expected = JSON.stringify({
+            c1: `${errmsg}\n`,
+            c2: `${logmsg}\n`,
+        });
+    });
+
+    test("same as above test but for process.stdout|stderr.write", async (t) => {
+        const c1 = new Capture({
+            stdout: true,
+            stderr: false,
+        });
+        const c2 = new Capture({
+            stdout: false,
+            stderr: true,
+        });
+
+        c1.start();
+        c2.start();
+
+        const errmsg = "this should not be logged - err\n";
+        const logmsg = "this should not be logged - log\n";
+        process.stderr.write(errmsg);
+        process.stdout.write(logmsg);
+
+        c1.stop();
+        c2.stop();
+
+        t.actual = JSON.stringify({
+            c1: c1.output,
+            c2: c2.output,
+        });
+
+        t.expected = JSON.stringify({
+            c1: logmsg,
+            c2: errmsg,
+        });
+    });
 });
 
 function replaceEsc(s: string): string {

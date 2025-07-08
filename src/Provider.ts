@@ -1,22 +1,25 @@
 import type { Capture } from "./Capture.js";
 
-const Defaults = {
-    log: console.log,
-    info: console.info,
-    error: console.error,
-    warn: console.warn,
-    debug: console.debug,
-    dirxml: console.dirxml,
-    stdout: process?.stdout?.write,
-    stderr: process?.stderr?.write,
+export type ConsoleMethods = "log" | "info" | "error" | "warn" | "debug" | "dirxml";
+export type ProcessMethods = "stdout" | "stderr";
+export type ConsoleLog = typeof console.log;
+
+const DefaultConsole: Record<ConsoleMethods, ConsoleLog> = {
+    log: console.log.bind(console),
+    info: console.info.bind(console),
+    error: console.error.bind(console),
+    warn: console.warn.bind(console),
+    debug: console.debug.bind(console),
+    dirxml: console.dirxml.bind(console),
 } as const;
 
-type ConsoleLog = typeof console.log;
+const DefaultProcess: Record<ProcessMethods, typeof process.stdout.write> = {
+    stdout: process?.stdout?.write.bind(process.stdout),
+    stderr: process?.stderr?.write.bind(process.stderr),
+} as const;
 
 /**
  * This allows for multiple instances of Capture to run at the same time.
- * It won't prevent overlap in the event `B` starts capturing before `A` has
- * stopped, but it will prevent `A` from having incomplete data if overlap occurs.
  */
 export class Provider {
     public instances: Set<Capture>;
@@ -34,17 +37,15 @@ export class Provider {
 
         this.resetOriginals();
 
-        const pushReset = (...args: Parameters<typeof this.wrapConsoleMethod>) => {
-            this.resetCbs.push(this.wrapConsoleMethod(...args));
-        };
+        // console methods
+        this.resetCbs.push(this.wrapConsoleMethod("log", "stdout"));
+        this.resetCbs.push(this.wrapConsoleMethod("error", "stderr"));
+        this.resetCbs.push(this.wrapConsoleMethod("warn", "stderr"));
+        this.resetCbs.push(this.wrapConsoleMethod("info", "stdout"));
+        this.resetCbs.push(this.wrapConsoleMethod("debug", "stdout"));
+        this.resetCbs.push(this.wrapConsoleMethod("dirxml", "stdout"));
 
-        pushReset("log", "stdout");
-        pushReset("info", "stdout");
-        pushReset("error", "stderr");
-        pushReset("warn", "stderr");
-        pushReset("debug", "stdout");
-        pushReset("dirxml", "stdout");
-
+        // process.stdout|stderr.write
         this.resetCbs.push(this.wrapProcessMethod("stdout"));
         this.resetCbs.push(this.wrapProcessMethod("stderr"));
     }
@@ -55,6 +56,7 @@ export class Provider {
     }
 
     public start = (instance: Capture) => {
+        // Do we really need the listening variable?
         this.listening = true;
         this.instances.add(instance);
         this.overwrite();
@@ -74,45 +76,60 @@ export class Provider {
     };
 
     private wrapConsoleMethod = (
-        name: keyof typeof console,
+        name: ConsoleMethods,
         type: "stdout" | "stderr",
     ): (() => void) => {
-        const original = console[name] as ConsoleLog;
+        const original = DefaultConsole[name];
 
-        if (console[name]) {
-            (console[name] as ConsoleLog) = (...data: unknown[]) => {
-                let toAppend = "";
-                for (let i = 0; i < data.length; ++i) {
-                    toAppend += i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
-                }
+        if (!console[name] || !original) return () => {};
 
-                for (const instance of this.instances) {
-                    if (instance.opts[name as keyof typeof instance.opts]) {
-                        instance[type] += toAppend;
-                        instance.output += toAppend;
-                    } else {
-                        original(...data);
-                    }
+        const capturedMethods = new Set<ConsoleMethods>();
+        console[name] = (...data: unknown[]) => {
+            let toAppend = "";
+            for (let i = 0; i < data.length; ++i) {
+                toAppend += i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
+            }
+
+            for (const instance of this.instances) {
+                if (instance.opts[name]) capturedMethods.add(name);
+            }
+
+            let count = 0;
+            for (const instance of this.instances) {
+                if (instance.opts[name]) {
+                    instance[type] += toAppend;
+                    instance.output += toAppend;
+                } else if (!count++ && !capturedMethods.has(name)) {
+                    original(...data);
                 }
-            };
-        }
+            }
+        };
 
         return () => {
-            (console[name] as ConsoleLog) =
-                Defaults[name as keyof typeof Defaults] ?? original;
+            console[name] = original;
         };
     };
 
     private wrapProcessMethod = (type: "stdout" | "stderr"): (() => void) => {
-        const original = Defaults[type];
+        const original = DefaultProcess[type];
+
         if (!process?.stdout?.write || !original) return () => {};
 
         process[type].write = ((buffer: Uint8Array | string): void => {
             const str = typeof buffer === "string" ? buffer : buffer.toString();
+
+            const capturedMethods = new Set<ProcessMethods>();
+            for (const instance of this.instances) {
+                if (instance.opts[type]) capturedMethods.add(type);
+            }
+
+            let count = 0;
             for (const instance of this.instances) {
                 if (instance.opts[type]) {
                     instance[type] += str;
                     instance.output += str;
+                } else if (!count++ && !capturedMethods.has(type)) {
+                    original(buffer);
                 }
             }
         }) as typeof process.stdout.write;
