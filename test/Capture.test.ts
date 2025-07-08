@@ -97,10 +97,24 @@ describe("Capture", () => {
         t.expected = "";
     });
 
-    /**
-     * TODO: Capturing the data 3x
-     * */
-    test.skip("...args log statements", async (t) => {
+    test("process.(stdout | stderr).write", async (t) => {
+        capture.start();
+        process.stdout.write("foo\n");
+        process.stderr.write("bar\n");
+        capture.stop();
+
+        t.actual = JSON.stringify({
+            stdout: capture.stdout,
+            stderr: capture.stderr,
+        });
+
+        t.expected = JSON.stringify({
+            stdout: "foo\n",
+            stderr: "bar\n",
+        });
+    });
+
+    test("...args log statements", async (t) => {
         capture.start();
         console.log("foo", "bar", "baz");
         console.error("foo", "bar", "baz");
@@ -262,6 +276,36 @@ describe("Capture", () => {
         t.expected = JSON.stringify({
             c1: "foo\nbar\n",
             c2: "bar\nbaz\n",
+        });
+    });
+
+    test("multiple instances with different configs", async (t) => {
+        const c1 = new Capture({
+            log: false,
+            error: true,
+        });
+        const c2 = new Capture({
+            log: true,
+            error: false,
+        });
+
+        c1.start();
+        c2.start();
+
+        console.error("foo");
+        console.log("bar");
+
+        c1.stop();
+        c2.stop();
+
+        t.actual = JSON.stringify({
+            c1: c1.output,
+            c2: c2.output,
+        });
+
+        t.expected = JSON.stringify({
+            c1: "foo\n",
+            c2: "bar\n",
         });
     });
 });

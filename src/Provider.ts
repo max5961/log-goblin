@@ -11,6 +11,8 @@ const Defaults = {
     stderr: process?.stderr?.write,
 } as const;
 
+type ConsoleLog = typeof console.log;
+
 /**
  * This allows for multiple instances of Capture to run at the same time.
  * It won't prevent overlap in the event `B` starts capturing before `A` has
@@ -29,6 +31,9 @@ export class Provider {
 
     public overwrite() {
         if (!this.listening) return;
+
+        this.resetOriginals();
+
         const pushReset = (...args: Parameters<typeof this.wrapConsoleMethod>) => {
             this.resetCbs.push(this.wrapConsoleMethod(...args));
         };
@@ -72,29 +77,30 @@ export class Provider {
         name: keyof typeof console,
         type: "stdout" | "stderr",
     ): (() => void) => {
-        const original = console[name] as typeof console.log;
+        const original = console[name] as ConsoleLog;
 
         if (console[name]) {
-            (console[name] as typeof console.log) = (...data: unknown[]) => {
+            (console[name] as ConsoleLog) = (...data: unknown[]) => {
+                let toAppend = "";
                 for (let i = 0; i < data.length; ++i) {
-                    const toAppend =
-                        i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
+                    toAppend += i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
+                }
 
-                    for (const instance of this.instances) {
-                        if (instance.opts[name as keyof typeof instance.opts]) {
-                            instance[type] += toAppend;
-                            instance.output += toAppend;
-                        } else {
-                            original(...data);
-                        }
+                for (const instance of this.instances) {
+                    if (instance.opts[name as keyof typeof instance.opts]) {
+                        instance[type] += toAppend;
+                        instance.output += toAppend;
+                    } else {
+                        original(...data);
                     }
                 }
             };
         }
 
-        return () =>
-            ((console[name] as typeof console.log) =
-                Defaults[name as keyof typeof Defaults] ?? original);
+        return () => {
+            (console[name] as ConsoleLog) =
+                Defaults[name as keyof typeof Defaults] ?? original;
+        };
     };
 
     private wrapProcessMethod = (type: "stdout" | "stderr"): (() => void) => {
