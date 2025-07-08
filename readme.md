@@ -9,6 +9,34 @@ npm install log-goblin
 
 ## Example Usage
 
+#### Using Capture.exec
+
+```typescript
+import { Capture } from "log-goblin";
+
+const capture = new Capture();
+
+capture
+    .exec(() => {
+        console.log("foo");
+    })
+    .handle(({stdout, stderr, output}) => {
+        /* do something with the data */
+    })
+    // Its up to you when you reset the data stored in the Capture object
+    .reset();
+
+capture.exec(() => {
+    console.log("foo");
+})
+
+// handle method is not required.  stdout, stderr, and output are all public vars
+console.log("Captured stdout: " + capture.stdout)
+capture.reset();
+```
+
+---
+
 #### Using Capture.start / Capture.stop
 
 ```typescript
@@ -30,19 +58,11 @@ capture
     .handle(({stdout, stderr, output}) => {
         /* do something with the data */
     })
+    .reset();
 
-// capture.output and capture.stdout are now both "foo\nbar\n"
-
-capture
-    // Append capture.output to foo.txt
-    .write("foo.txt", { flag: "a", contents: "output" })
-
-    // Writing to file does not reset capture.stdout, capture.stderr, or capture.output
-    // Saved data must be manually reset
-    .reset()
 ```
 
-#### Using Capture.exec
+#### Writing To File
 
 ```typescript
 import { Capture } from "capture-stdout";
@@ -53,7 +73,7 @@ capture
     .exec(() => {
         console.error("foo")
     })
-    .write("foo.txt", { flag: "a", contents: "stderr" })
+    .write("error.log", { flag: "a", contents: "stderr" })
     .reset();
 ```
 
@@ -81,6 +101,47 @@ c2.stop()
 ---
 
 ### Capture
+
+- `Constructor`
+    - `{ stdout, stderr, stdout, log, error, warn, info, debug, dirxml }`
+        - `stdout`
+            - *type*: `boolean`
+            - *default*: `false`
+            - Determines if `process.stdout.write` is intercepted
+        - `stderr`
+            - *type*: `boolean`
+            - *default*: `false`
+            - Determines if `process.stderr.write` is intercepted
+        - `log`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.log` is intercepted
+        - `error`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.error` is intercepted
+        - `warn`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.warn` is intercepted
+        - `info`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.info` is intercepted
+        - `debug`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.debug` is intercepted
+        - `dirxml`
+            - *type*: `boolean`
+            - *default*: `true`
+            - Determines if `console.dirxml` is intercepted
+
+> NOTE:
+> If `stdout` is set to `true`, and `log` is set to `false`, `console.log`
+> statements will still be captured.  The same is true for `stderr` and
+> `error`.  Many of the `console` methods ultimately call
+> `process.stdout|stderr.write`
 
 - `{ output, stderr, stdout, start, stop, exec, reset, write, writeAsync }`
     - `output`
@@ -116,6 +177,8 @@ c2.stop()
     - `handle`
         - *type*: `(cb: ({stdout: string; stderr: string; output: string}) => unknown) => Capture`
         - Utility designed for handling the saved data method chaining in mind
+    - `setOpts`
+        - same as Constructor
 
 
 
