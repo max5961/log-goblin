@@ -1,6 +1,9 @@
 /**
- * Poor man's version of Jest that doesn't capture stdout/stderr
- * (tailored specifically to this proj)
+ * Poor man's version of Jest.  This was written for this project prior to when
+ * I decided to patch console methods as a means of intercepting stdout.  Jest/Vitest
+ * patches console methods itself, so patching process.stdout|stderr.write wasn't
+ * doing anything.  Keeping this since it works, and also serves as a
+ * 'non testing framework' environment.
  */
 
 type TestResult = { actual: unknown; expected: unknown; desc: string };

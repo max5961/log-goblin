@@ -13,7 +13,8 @@
     "scripts": {
         "compile": "if [ -d ./dist ]; then rm -r dist; fi; tsc --noUnusedLocals",
         "start": "npm run compile && node ./dist/src/index.js",
-        "test": "npm run compile && for file in ./dist/test/*.test.js; do node $file; done",
+        "test": "npm run compile && node ./dist/test/Capture.test.js",
+        "test:vitest": "npx vitest ./test/vitest.test.ts",
         "lint": "eslint",
         "fix": "eslint --fix"
     },
@@ -30,5 +31,8 @@
         "eslint": "^9.30.1",
         "globals": "^16.3.0",
         "typescript-eslint": "^8.35.1"
+    },
+    "dependencies": {
+        "vitest": "^3.2.4"
     }
 }
