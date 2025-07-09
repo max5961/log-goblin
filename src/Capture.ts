@@ -24,14 +24,26 @@ export class Capture {
     public opts!: SetOpts;
 
     constructor(opts: Opts = {}) {
-        this.reset();
+        this.clear();
         this.opts = new SetOpts(opts);
     }
 
-    public reset = (): Capture => {
-        this.stdout = "";
-        this.stderr = "";
-        this.output = "";
+    /**
+     * Clears the all captured data from an instance.  If specified, clears only specific
+     * variables.
+     *
+     * @example
+     * ```typescript
+     * // clears only capture.stdout and capture.out, leaving capture.stderr untouched
+     * capture.reset("stdout", "output");
+     * ```
+     */
+    public clear = (...contents: ("stdout" | "stderr" | "output")[]): Capture => {
+        const toClear = contents.length ? contents : ["stdout", "stderr", "output"];
+        toClear.forEach((c) => {
+            this[c as "stdout" | "stderr" | "output"] = "";
+        });
+
         return this;
     };
 

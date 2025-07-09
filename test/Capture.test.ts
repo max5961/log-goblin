@@ -25,7 +25,7 @@ describe("Capture", () => {
     });
 
     beforeEach(async () => {
-        capture.reset();
+        capture.clear();
         const rm = (f: string) => {
             try {
                 fs.rmSync(f);
@@ -204,7 +204,7 @@ describe("Capture", () => {
                 console.log("foo");
             })
             .writeAsync("foo.txt", { flag: "a" })
-            .then((c) => c.reset());
+            .then((c) => c.clear());
 
         await capture
             .exec(() => {
@@ -226,8 +226,8 @@ describe("Capture", () => {
             .write("bar.txt", { contents: "stderr" })
             .write("baz.txt", { contents: "output" })
 
-            // reset if performing another capture.
-            .reset();
+            // clear if performing another capture.
+            .clear();
 
         t.actual = JSON.stringify({
             foo: fs.readFileSync("foo.txt").toString(),

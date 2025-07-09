@@ -10,8 +10,8 @@ describe("Works with vitest", () => {
     const cconsole = new Capture();
 
     beforeEach(() => {
-        cprocess.reset();
-        cconsole.reset();
+        cprocess.clear();
+        cconsole.clear();
     });
 
     test("console.log", () => {

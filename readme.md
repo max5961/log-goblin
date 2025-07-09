@@ -1,5 +1,4 @@
-*Capture stdout/stderr in Node.  Should capture console.log, console.warn, and
-console.error statements in browser (untested)*
+*Capture and save stdout/stderr*
 
 ```sh
 npm install log-goblin
@@ -10,6 +9,10 @@ npm install log-goblin
 ## Example Usage
 
 #### Using Capture.exec
+
+*This is recommended for simple **synchronous** use cases because you don't need
+to remember to stop capturing output.  However, it does not handle async blocks
+of code.*
 
 ```typescript
 import { Capture } from "log-goblin";
@@ -23,16 +26,15 @@ capture
     .handle(({stdout, stderr, output}) => {
         /* do something with the data */
     })
-    // Its up to you when you reset the data stored in the Capture object
-    .reset();
+    .clear();
 
-capture.exec(() => {
-    console.log("foo");
-})
-
-// handle method is not required.  stdout, stderr, and output are all public vars
-console.log("Captured stdout: " + capture.stdout)
-capture.reset();
+/*
+ * NOTE:
+ *    - The handle method is a utility for handling the data, but not required.
+ *      Capture.stdout|stderr|output are all public variables.
+ *    - You must decide when to clear data.  Capture does not decide when its
+ *      convenient to do so.
+ **/
 ```
 
 ---
@@ -53,16 +55,18 @@ capture.stop();
 
 capture.start();
 console.log("bar");
-capture
-    .stop()
-    .handle(({stdout, stderr, output}) => {
-        /* do something with the data */
-    })
-    .reset();
+// capture.output and capture.stdout are now "foo\nbar\n"
+
+capture.stop()
 
 ```
 
 #### Writing To File
+
+The `write` and `writeAsync` methods create a wrapper around the
+`fs.writeFileSync` and `fs.promises.writeFile` methods.  The only differences
+are that the file contents parameter is replaced by the options parameter which
+contains a `contents` option for what gets written to the file.
 
 ```typescript
 import { Capture } from "capture-stdout";
@@ -74,7 +78,7 @@ capture
         console.error("foo")
     })
     .write("error.log", { flag: "a", contents: "stderr" })
-    .reset();
+    .clear();
 ```
 
 #### Overlap behavior with multiple instances
@@ -143,7 +147,7 @@ c2.stop()
 > `error`.  Many of the `console` methods ultimately call
 > `process.stdout|stderr.write`
 
-- `{ output, stderr, stdout, start, stop, exec, reset, write, writeAsync }`
+- `{ output, stderr, stdout, start, stop, exec, clear, write, writeAsync }`
     - `output`
         - *type*: `string`
         - Anything written to stdout or stderr is stored here.
@@ -162,8 +166,8 @@ c2.stop()
     - `exec`
         - *type*: `(callback: () => unknown) => Capture`
         - Captures anything wrapped in the callback argument.
-    - `reset`
-        - *type*: `() => Capture`
+    - `clear`
+        - *type*: `(...contents: ("stdout" | "stderr" | "output")[]) => Capture`
         - Resets stdout, stderr, and output back to empty string.
     - `write`
         - *type*: Same as `fs.writeFileSync` but without the 2nd argument.
