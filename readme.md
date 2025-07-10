@@ -1,4 +1,4 @@
-*Capture and save stdout/stderr*
+*Capture and save stdout/stderr in Node*
 
 ```sh
 npm install log-goblin
@@ -42,7 +42,7 @@ capture
 #### Using Capture.start / Capture.stop
 
 ```typescript
-import { Capture } from "capture-stdout";
+import { Capture } from "log-goblin";
 
 const capture = new Capture()
 
@@ -69,7 +69,7 @@ are that the file contents parameter is replaced by the options parameter which
 contains a `contents` option for what gets written to the file.
 
 ```typescript
-import { Capture } from "capture-stdout";
+import { Capture } from "log-goblin";
 
 const capture = new Capture()
 
@@ -84,7 +84,7 @@ capture
 #### Overlap behavior with multiple instances
 
 ```typescript
-import { Capture } from "capture-stdout";
+import { Capture } from "log-goblin";
 
 const c1 = new Capture()
 const c2 = new Capture()
@@ -106,83 +106,91 @@ c2.stop()
 
 ### Capture
 
-- `Constructor`
-    - `{ stdout, stderr, stdout, log, error, warn, info, debug, dirxml }`
-        - `stdout`
-            - *type*: `boolean`
-            - *default*: `false`
-            - Determines if `process.stdout.write` is intercepted
-        - `stderr`
-            - *type*: `boolean`
-            - *default*: `false`
-            - Determines if `process.stderr.write` is intercepted
-        - `log`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.log` is intercepted
-        - `error`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.error` is intercepted
-        - `warn`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.warn` is intercepted
-        - `info`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.info` is intercepted
-        - `debug`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.debug` is intercepted
-        - `dirxml`
-            - *type*: `boolean`
-            - *default*: `true`
-            - Determines if `console.dirxml` is intercepted
+#### Options (Constructor)
+- Configures which output sources are used to capture output.
+- All properties are publicly accessible booleans indicating whether to override
+  specific functions.  These can be set in the constructor or after
+  instantiation, e.g.: `capture.opts.log = true;`
+
+- property `stdout` - should the instance capture output from `process.stdout.write`?
+    - Defaults to `false`.
+- property `stderr` - should the instance capture output from `process.stderr.write`?
+    - Defaults to `false`.
+- property `log` - should the instance capture output from `console.log`?
+    - Defaults to `true`.
+- property `error` - should the instance capture output from `console.error`?
+    - Defaults to `true`.
+- property `warn` - should the instance capture output from `console.warn`?
+    - Defaults to `true`.
+- property `info` - should the instance capture output from `console.info`?
+    - Defaults to `true`.
+- property `debug` - should the instance capture output from `console.debug`?
+    - Defaults to `true`.
+- property `dirxml` - should the instance capture output from `console.dirxml`?
+    - Defaults to `true`.
 
 > NOTE:
-> If `stdout` is set to `true`, and `log` is set to `false`, `console.log`
-> statements will still be captured.  The same is true for `stderr` and
-> `error`.  Many of the `console` methods ultimately call
+> If `stdout` is set to `true`, and `log` is set to `false`, console.log
+> statements will still be captured.  The same is true for stderr and
+> console.error. Many of the `console` methods ultimately call
 > `process.stdout|stderr.write`
 
-- `{ output, stderr, stdout, start, stop, exec, clear, write, writeAsync }`
-    - `output`
-        - *type*: `string`
-        - Anything written to stdout or stderr is stored here.
-    - `stdout`
-        - *type*: `string`
-        - Anything written to stdout is stored here.
-    - `stderr`
-        - *type*: `string`
-        - Anything written to stderr is stored here.
-    - `start`
-        - *type*: ``() => Capture`
-        - Starts saving stdout/stderr data to the instance.
-    - `stop`
-        - *type*: `() => Capture`
-        - Stops saving stdout/stderr data to the instance.
-    - `exec`
-        - *type*: `(callback: () => unknown) => Capture`
-        - Captures anything wrapped in the callback argument.
-    - `clear`
-        - *type*: `(...contents: ("stdout" | "stderr" | "output")[]) => Capture`
-        - Resets stdout, stderr, and output back to empty string.
-    - `write`
-        - *type*: Same as `fs.writeFileSync` but without the 2nd argument.
-          Returns the instance.
-        - Specify whether saved `stdout`, `stderr`, or `output` is written to the file
-          with the `{ contents: "stdout" | "stderr" | "output" }` option.
-    - `writeAsync`
-        - *type*:  Same as `write`, but uses `fs.promises.write` and returns a
-          Promise that resolves to the Capture instance.
-        - Same as `write`.
-    - `handle`
-        - *type*: `(cb: ({stdout: string; stderr: string; output: string}) => unknown) => Capture`
-        - Utility designed for handling the saved data method chaining in mind
-    - `setOpts`
-        - same as Constructor
+### Methods & Properties
+
+#### stdout
+- *type*: `string`
+- Captured `stdout` data
+
+#### stderr
+- *type*: `string`
+- Captured `stderr` data
+
+#### output
+- *type*: `string`
+- Combination of captured `stdout` and `stderr` data.
+
+#### start
+- *type*: `() => Capture`
+- Start capturing output according to the current options.
+
+#### stop
+- *type*: `() => Capture`
+- Stops capturing output.
+
+#### clear
+- *type*: `(...contents: ("stdout" | "stderr" | "output")[]) => Capture`
+- Clears all captured data stored on the instance. If specific keys are
+  provided, only those will be cleared.
+
+#### exec
+- *type*: `(callback: () => unknown) => Capture`
+- Capture all specified output generated during the execution of the
+  *synchronous* callback argument.
+- NOTE: Does **not** handle asynchronous callbacks.
+
+#### write
+- Writes the captured output to a file using `fs.writeFileSync`.
+- By default, writes `Capture.output`, which comprises both stdout and
+  stderr. You can optionally specify which captured output to write
+  using the `contents` option: `"stdout"` | `"stderr"` | `"output"`. All
+  other options are passed directly to fs.writeFileSync.
+
+#### writeAsync
+- Writes the captured output to a file using `fs.promises.writeFile`.
+- By default, writes `Capture.output`, which comprises both stdout and
+  stderr. You can optionally specify which captured output to write
+  using the `contents` option: `"stdout"` | `"stderr"` | `"output"`. All
+  other options are passed directly to fs.promises.writeFile.
+
+#### handle
+- *type*: `(cb: ({stdout: string; stderr: string; output: string}) =>
+  unknown) => Capture`
+- Utility for handling captured output with method chaining in mind. Since
+  `Capture.output|stdout|stderr` are all public variables, this method is a
+  convenience, not a necessity.
+
+#### setOpts
+- same as Constructor
 
 
 
