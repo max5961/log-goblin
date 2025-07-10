@@ -29,11 +29,10 @@ capture
     .clear();
 
 /*
- * NOTE:
- *    - The handle method is a utility for handling the data, but not required.
- *      Capture.stdout|stderr|output are all public variables.
- *    - You must decide when to clear data.  Capture does not decide when its
- *      convenient to do so.
+ * - The handle method is a utility for handling the data, but not required.
+ *   Capture.stdout|stderr|output are all public variables.
+ * - You must decide when to clear data.  Capture does not decide when its
+ *   convenient to do so.
  **/
 ```
 
@@ -62,11 +61,6 @@ capture.stop()
 ```
 
 #### Writing To File
-
-The `write` and `writeAsync` methods create a wrapper around the
-`fs.writeFileSync` and `fs.promises.writeFile` methods.  The only differences
-are that the file contents parameter is replaced by the options parameter which
-contains a `contents` option for what gets written to the file.
 
 ```typescript
 import { Capture } from "log-goblin";

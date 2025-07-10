@@ -1,6 +1,6 @@
 {
     "name": "log-goblin",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "description": "Capture stdout/stderr in Node",
     "main": "./dist/src/index.js",
     "exports": {
@@ -26,6 +26,10 @@
     ],
     "author": "Maxwell Morrissey",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/max5961/log-goblin.git"
+    },
     "devDependencies": {
         "@types/node": "^24.0.10",
         "eslint": "^9.30.1",
