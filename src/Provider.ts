@@ -1,8 +1,8 @@
 import type { Capture } from "./Capture.js";
-
 export type ConsoleMethods = "log" | "info" | "error" | "warn" | "debug" | "dirxml";
 export type ProcessMethods = "stdout" | "stderr";
 export type ConsoleLog = typeof console.log;
+import util from "node:util";
 
 const DefaultConsole: Record<ConsoleMethods, ConsoleLog> = {
     log: console.log.bind(console),
@@ -85,10 +85,7 @@ export class Provider {
 
         const capturedMethods = new Set<ConsoleMethods>();
         console[name] = (...data: unknown[]) => {
-            let toAppend = "";
-            for (let i = 0; i < data.length; ++i) {
-                toAppend += i === data.length - 1 ? `${data[i]}\n` : `${data[i]} `;
-            }
+            const toAppend = util.format(...data) + "\n";
 
             for (const instance of this.instances) {
                 if (instance.opts[name]) capturedMethods.add(name);

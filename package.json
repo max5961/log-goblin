@@ -1,6 +1,6 @@
 {
     "name": "log-goblin",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Capture stdout/stderr in Node",
     "main": "./dist/src/index.js",
     "exports": {

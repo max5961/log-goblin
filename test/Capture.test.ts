@@ -535,6 +535,26 @@ describe("Capture", () => {
             stderr: ["foo bar\n", "baz\n"],
         });
     });
+
+    test("uses util.format correctly", async (t) => {
+        capture.exec(() => {
+            console.log("%d %s", 10, "foo");
+        });
+
+        t.actual = capture.output;
+        t.expected = "10 foo\n";
+    });
+
+    test("handles time formatted by util.format", async (t) => {
+        capture.exec(() => {
+            console.time("foo");
+            console.timeEnd("foo");
+        });
+
+        process.stdout.write(`  Time was: ${capture.output}`);
+        t.actual = capture.output.slice(0, 5);
+        t.expected = "foo: ";
+    });
 });
 
 function replaceEsc(s: string): string {
