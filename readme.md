@@ -23,7 +23,7 @@ capture
     .exec(() => {
         console.log("foo");
     })
-    .handle(({stdout, stderr, output}) => {
+    .handle(({stdout, stderr, output, entries}) => {
         /* do something with the data */
     })
     .clear();
@@ -143,6 +143,13 @@ c2.stop()
 - *type*: `string`
 - Combination of captured `stdout` and `stderr` data.
 
+#### entries
+- *type*: `{ stdout: string[]; stderr: string[]; output: string[] }`
+- Object containing the data stored in arrays, rather than a continuous string.
+  Each array index represents the data from a single function call.
+  `console.log("foo", "bar")` for example would store in `["foo bar\n"]` rather
+  than `["foo\n", "bar\n"]`.
+
 #### start
 - *type*: `() => Capture`
 - Start capturing output according to the current options.
@@ -177,7 +184,8 @@ c2.stop()
   other options are passed directly to fs.promises.writeFile.
 
 #### handle
-- *type*: `(cb: ({stdout: string; stderr: string; output: string}) =>
+- *type*: `(cb: ({stdout: string; stderr: string; output: string; entries:
+  Capture["entries"]}) =>
   unknown) => Capture`
 - Utility for handling captured output with method chaining in mind. Since
   `Capture.output|stdout|stderr` are all public variables, this method is a

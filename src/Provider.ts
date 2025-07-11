@@ -99,6 +99,8 @@ export class Provider {
                 if (instance.opts[name]) {
                     instance[type] += toAppend;
                     instance.output += toAppend;
+                    instance.entries[type].push(toAppend);
+                    instance.entries.output.push(toAppend);
                 } else if (!count++ && !capturedMethods.has(name)) {
                     original(...data);
                 }
@@ -128,6 +130,8 @@ export class Provider {
                 if (instance.opts[type]) {
                     instance[type] += str;
                     instance.output += str;
+                    instance.entries[type].push(str);
+                    instance.entries.output.push(str);
                 } else if (!count++ && !capturedMethods.has(type)) {
                     original(buffer);
                 }

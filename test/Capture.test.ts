@@ -474,6 +474,67 @@ describe("Capture", () => {
             c2: errmsg,
         });
     });
+
+    test("capture.entries - console.log", async (t) => {
+        capture.exec(() => {
+            console.log("foo", "bar");
+            console.log("baz");
+        });
+
+        t.actual = JSON.stringify({
+            output: capture.entries.output,
+            stdout: capture.entries.stdout,
+            stderr: capture.entries.stderr,
+        });
+
+        t.expected = JSON.stringify({
+            output: ["foo bar\n", "baz\n"],
+            stdout: ["foo bar\n", "baz\n"],
+            stderr: [],
+        });
+    });
+
+    test("capture.entries - process.stdout.write", async (t) => {
+        const capture = new Capture({ stdout: true, stderr: true });
+
+        capture.exec(() => {
+            process.stdout.write("foo bar\n");
+            process.stdout.write("baz\n");
+        });
+
+        t.actual = JSON.stringify({
+            output: capture.entries.output,
+            stdout: capture.entries.stdout,
+            stderr: capture.entries.stderr,
+        });
+
+        t.expected = JSON.stringify({
+            output: ["foo bar\n", "baz\n"],
+            stdout: ["foo bar\n", "baz\n"],
+            stderr: [],
+        });
+    });
+
+    test("capture.entries - process.stderr.write", async (t) => {
+        const capture = new Capture({ stdout: true, stderr: true });
+
+        capture.exec(() => {
+            process.stderr.write("foo bar\n");
+            process.stderr.write("baz\n");
+        });
+
+        t.actual = JSON.stringify({
+            output: capture.entries.output,
+            stdout: capture.entries.stdout,
+            stderr: capture.entries.stderr,
+        });
+
+        t.expected = JSON.stringify({
+            output: ["foo bar\n", "baz\n"],
+            stdout: [],
+            stderr: ["foo bar\n", "baz\n"],
+        });
+    });
 });
 
 function replaceEsc(s: string): string {

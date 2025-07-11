@@ -34,6 +34,15 @@ export class Capture {
     public output!: string;
 
     /**
+     * Captured data stored in arrays, rather than a single string.
+     */
+    public entries: {
+        stdout: string[];
+        stderr: string[];
+        output: string[];
+    };
+
+    /**
      * Configures which output sources are used to capture output.
      * All properties are booleans indicating whether to override specific functions
      *
@@ -68,8 +77,13 @@ export class Capture {
     public opts!: SetOpts;
 
     constructor(opts: Opts = {}) {
-        this.clear();
         this.opts = new SetOpts(opts);
+        this.entries = {
+            stdout: [],
+            stderr: [],
+            output: [],
+        };
+        this.clear();
     }
 
     /**
@@ -89,6 +103,7 @@ export class Capture {
         const toClear = contents.length ? contents : ["stdout", "stderr", "output"];
         toClear.forEach((c) => {
             this[c as "stdout" | "stderr" | "output"] = "";
+            this.entries[c as "stdout" | "stderr" | "output"] = [];
         });
 
         return this;
@@ -107,24 +122,27 @@ export class Capture {
 
     /**
      * Utility for handling captured output with method chaining in mind.
-     * Since `Capture.output|stdout|stderr` are all public variables, this method
-     * is a convenience, not a necessity.
+     * Since `Capture.output|stdout|stderr` and Capture.entries are all public
+     * variables, this method is a convenience, not a necessity.
      */
     public handle = (
         cb: ({
             output,
             stdout,
             stderr,
+            entries,
         }: {
             output: string;
             stdout: string;
             stderr: string;
+            entries: Capture["entries"];
         }) => unknown,
     ): Capture => {
         cb({
             output: this.output,
             stdout: this.stdout,
             stderr: this.stderr,
+            entries: this.entries,
         });
 
         return this;
