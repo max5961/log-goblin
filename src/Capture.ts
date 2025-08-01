@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { provider } from "./Provider.js";
 import { SetOpts, type Opts } from "./Opts.js";
+import { handlers, type Handler, type DataType } from "./DataHandlers.js";
 
 type WriteOpts =
     | {
@@ -217,6 +218,22 @@ export class Capture {
         const contents = this.getWriteContents(opts);
         await writeFile(file, contents, opts);
         return this;
+    };
+
+    /**
+     * Add a handler to handle data as it comes.
+     * @returns a callback to unsubscribe the handler.
+     */
+    public on = (dataType: DataType, handler: Handler) => {
+        const off = handlers.addHandler(this, dataType, handler);
+        return off;
+    };
+
+    /**
+     * Remove a handler from the set of handlers.
+     */
+    public off = (dataType: DataType, handler: Handler) => {
+        handlers.removeHandler(this, dataType, handler);
     };
 
     private getWriteContents = (opts: WriteOpts) => {

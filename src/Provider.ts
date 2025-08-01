@@ -3,6 +3,7 @@ export type ConsoleMethods = "log" | "info" | "error" | "warn" | "debug" | "dirx
 export type ProcessMethods = "stdout" | "stderr";
 export type ConsoleLog = typeof console.log;
 import util from "node:util";
+import { handlers, type DataType } from "./DataHandlers.js";
 
 const DefaultConsole: Record<ConsoleMethods, ConsoleLog> = {
     log: console.log.bind(console),
@@ -98,6 +99,8 @@ export class Provider {
                     instance.output += toAppend;
                     instance.entries[type].push(toAppend);
                     instance.entries.output.push(toAppend);
+
+                    this.dispatchHandlers(instance, type, toAppend);
                 } else if (!count++ && !capturedMethods.has(name)) {
                     original(...data);
                 }
@@ -129,6 +132,8 @@ export class Provider {
                     instance.output += str;
                     instance.entries[type].push(str);
                     instance.entries.output.push(str);
+
+                    this.dispatchHandlers(instance, type, str);
                 } else if (!count++ && !capturedMethods.has(type)) {
                     original(buffer);
                 }
@@ -139,6 +144,15 @@ export class Provider {
             process[type].write = original;
         };
     };
+
+    private dispatchHandlers(
+        instance: Capture,
+        type: Exclude<DataType, "output">,
+        data: string,
+    ) {
+        handlers.handle(instance, type, data);
+        handlers.handle(instance, "output", data);
+    }
 }
 
 export const provider = new Provider();
