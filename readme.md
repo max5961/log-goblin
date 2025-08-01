@@ -103,13 +103,13 @@ c2.stop()
 ```typescript
 import { Capture } from "log-goblin";
 
-// Default captures console methods, but does not capture process.stdout|stderr.write
+// Default constructor captures all console methods, but does not capture process.stdout|stderr.write
 const capture = new Capture();
 
 capture.on("stdout", (data: string) => {
     process.stdout.write("The captured data was: ", data);
 
-    // If you're doing this a lot, maybe you want to prevent accumulation of dat
+    // Depending on your use case, you might want to prevent accumulation of data.
     capture.clear();
 })
 
