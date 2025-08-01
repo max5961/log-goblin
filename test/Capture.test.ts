@@ -555,6 +555,200 @@ describe("Capture", () => {
         t.actual = capture.output.slice(0, 5);
         t.expected = "foo: ";
     });
+
+    test("Capture.on('stdout', cb) with only console methods captured", async (t) => {
+        const capture = new Capture();
+
+        capture.on("stdout", (data) => {
+            t.actual = data;
+            t.expected = "bar\n";
+        });
+
+        capture.exec(() => {
+            console.error("foo");
+            console.log("bar");
+        });
+    });
+
+    test("Capture.on('stderr', cb) with only console methods captured", async (t) => {
+        const capture = new Capture();
+
+        capture.on("stderr", (data) => {
+            t.actual = data;
+            t.expected = "bar\n";
+        });
+
+        capture.exec(() => {
+            console.log("foo");
+            console.error("bar");
+        });
+    });
+
+    test("Capture.on('stdout', cb) with only console methods captured", async (t) => {
+        const capture = new Capture();
+
+        let actual = "";
+
+        capture.on("output", (data) => {
+            actual += data;
+        });
+
+        capture.exec(() => {
+            console.log("foo");
+            console.error("bar");
+        });
+
+        t.actual = actual;
+        t.expected = "foo\nbar\n";
+    });
+
+    test("Capture.on stdout passes only one function call's output at a time", async (t) => {
+        const capture = new Capture();
+
+        let actual = "";
+
+        capture.on("stdout", (data) => {
+            if (!actual) actual = data;
+        });
+
+        capture.exec(() => {
+            console.log("foo");
+            console.log("bar");
+        });
+
+        t.actual = actual;
+        t.expected = "foo\n";
+    });
+
+    test("Capture.on stderr passes only one function call's output at a time", async (t) => {
+        const capture = new Capture();
+
+        let actual = "";
+
+        capture.on("stderr", (data) => {
+            if (!actual) actual = data;
+        });
+
+        capture.exec(() => {
+            console.error("foo");
+            console.error("bar");
+        });
+
+        t.actual = actual;
+        t.expected = "foo\n";
+    });
+
+    test("Capture.on stderr passes only one function call's output at a time", async (t) => {
+        const capture = new Capture();
+
+        let actual = "";
+
+        capture.on("output", (data) => {
+            if (!actual) actual = data;
+        });
+
+        capture.exec(() => {
+            console.log("foo");
+            console.error("bar");
+        });
+
+        t.actual = actual;
+        t.expected = "foo\n";
+    });
+
+    test("Capture.on('stdout', cb) with only process methods catpured", async (t) => {
+        const capture = new Capture({
+            stdout: true,
+            stderr: true,
+            log: false,
+            error: false,
+            info: false,
+            warn: false,
+            debug: false,
+            dirxml: false,
+        });
+
+        capture.on("stdout", (data) => {
+            t.actual = data;
+            t.expected = "bazban";
+        });
+
+        capture.exec(() => {
+            process.stderr.write("foobar");
+            process.stdout.write("bazban");
+        });
+    });
+
+    test("Capture.on('stderr', cb) with only process methods catpured", async (t) => {
+        const capture = new Capture({
+            stdout: true,
+            stderr: true,
+            log: false,
+            error: false,
+            info: false,
+            warn: false,
+            debug: false,
+            dirxml: false,
+        });
+
+        capture.on("stderr", (data) => {
+            t.actual = data;
+            t.expected = "bazban";
+        });
+
+        capture.exec(() => {
+            process.stdout.write("foobar");
+            process.stderr.write("bazban");
+        });
+    });
+
+    test("Capture.on does not interfere with other instances", async (t) => {
+        const c1 = new Capture();
+        const c2 = new Capture();
+
+        let actual = "foo";
+
+        c1.on("stdout", () => {
+            actual = "bar";
+        });
+
+        c2.on("stdout", () => {});
+
+        c2.exec(() => {
+            console.log("this should not trigger c1's callback");
+        });
+
+        t.actual = actual;
+        t.expected = "foo";
+    });
+
+    test("Capture.off", async (t) => {
+        const capture = new Capture();
+
+        let actual = "";
+
+        const offStdout = capture.on("stdout", (data) => {
+            actual += data;
+        });
+        offStdout();
+
+        const offStderr = capture.on("stderr", (data) => {
+            actual += data;
+        });
+        offStderr();
+
+        const outputHandler = (data: string) => (actual += data);
+        capture.on("output", outputHandler);
+        capture.off("output", outputHandler);
+
+        capture.exec(() => {
+            console.log("foo");
+            console.error("bar");
+        });
+
+        t.actual = actual;
+        t.expected = "";
+    });
 });
 
 function replaceEsc(s: string): string {
