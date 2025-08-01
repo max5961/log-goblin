@@ -98,6 +98,32 @@ c2.stop()
 
 ---
 
+#### Event Handling
+
+```typescript
+import { Capture } from "log-goblin";
+
+// Default captures console methods, but does not capture process.stdout|stderr.write
+const capture = new Capture();
+
+capture.on("stdout", (data: string) => {
+    process.stdout.write("The captured data was: ", data);
+
+    // If you're doing this a lot, maybe you want to prevent accumulation of dat
+    capture.clear();
+})
+
+capture.exec(() => {
+    // `The captured data was: foo`
+    console.log("foo")
+    // `The captured data was: bar`
+    console.log("bar")
+})
+
+```
+
+---
+
 ### Capture
 
 #### Options (Constructor)
@@ -190,6 +216,17 @@ c2.stop()
 - Utility for handling captured output with method chaining in mind. Since
   `Capture.output|stdout|stderr` are all public variables, this method is a
   convenience, not a necessity.
+
+#### on
+- *type*: `(dataType: "stdout" | "stderr" | "output", handler: (data: string) => unknown)`
+- Handles *captured* stdout|stderr data as it comes in per function call that
+  produces it. For example, calling `console.log('foo');` then immediately
+  calling `console.log('bar');` dispatches the handler once for each.  Returns a
+  callback to remove the handler.
+
+#### off
+- *type*: `(dataType: "stdout" | "stderr" | "output", handler: (data: string) => unknown)`
+- Remove a handler previously assigned with the `on` method.
 
 #### setOpts
 - same as Constructor
